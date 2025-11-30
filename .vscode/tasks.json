@@ -1,0 +1,77 @@
+{
+    "version": "2.0.0",
+    "inputs": [
+        {
+            "id": "featureName",
+            "type": "promptString",
+            "description": "Enter the name of the new feature (e.g., user-login)"
+        }
+    ],
+    "tasks": [
+        {
+            "label": "Hyper-Spec: 1. Initialize Project",
+            "type": "shell",
+            "command": "uv",
+            "args": [
+                "run",
+                "hyper_spec.py",
+                "init"
+            ],
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Hyper-Spec: 2. Create New Feature Spec",
+            "type": "shell",
+            "command": "uv",
+            "args": [
+                "run",
+                "hyper_spec.py",
+                "new",
+                "--name", "${input:featureName}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Hyper-Spec: 3. Generate Implementation Plan",
+            "type": "shell",
+            "command": "uv",
+            "args": [
+                "run",
+                "hyper_spec.py",
+                "plan",
+                "--spec", "${file}"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            },
+            "dependsOn": []
+        },
+        {
+            "label": "Hyper-Spec: 4. Execute Implementation",
+            "type": "shell",
+            "command": "uv",
+            "args": [
+                "run",
+                "hyper_spec.py",
+                "implement",
+                "--plan", "${file}"
+            ],
+            "group": "build"
+        }
+    ]
+}
