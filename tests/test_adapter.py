@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from pathlib import Path
-from adapter import GovernanceAdapter, GovernanceContext
+from hyper_spec_core.adapter import GovernanceAdapter, GovernanceContext
 
 
 class TestGovernanceContext:

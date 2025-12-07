@@ -1,3 +1,5 @@
+"""Hyper-Spec CLI: Integrated Spec-Driven Development Environment."""
+
 import json
 import os
 import shlex
@@ -6,13 +8,13 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, PackageLoader, FileSystemLoader
 from pydantic import BaseModel
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 
-from adapter import GovernanceAdapter
+from hyper_spec_core.adapter import GovernanceAdapter
 
 # Initialize Typer and Rich Console
 app = typer.Typer(help="Hyper-Spec: Integrated Spec-Driven Development")
@@ -22,18 +24,20 @@ console = Console()
 SPECS_DIR = Path("specs")
 TEMPLATES_DIR = SPECS_DIR / ".templates"
 VSCODE_DIR = Path(".vscode")
-DEFAULT_GOVERNANCE_PATH = Path("../hyper-governance-core/.codex")
 DEFAULT_VALIDATOR_CMD = "codex validate --stack --ast"
 
 
 def resolve_gov_path(cli_path: Optional[Path]) -> Path:
-    """Resolve governance path with priority: CLI > Env > Default.
+    """Resolve governance path with priority: CLI > Env > Local .codex.
 
     Args:
         cli_path: Path provided via CLI flag, or None.
 
     Returns:
         Resolved path to the .codex governance directory.
+
+    Raises:
+        ValueError: If no governance path can be resolved.
     """
     if cli_path is not None:
         return cli_path
@@ -42,7 +46,34 @@ def resolve_gov_path(cli_path: Optional[Path]) -> Path:
     if env_path:
         return Path(env_path)
 
-    return DEFAULT_GOVERNANCE_PATH
+    # Try .codex/ in current directory as sensible default
+    local_codex = Path(".codex")
+    if local_codex.exists():
+        return local_codex
+
+    raise ValueError(
+        "Governance path not found. Either:\n"
+        "  - Run 'codex weave' to generate .codex/ locally\n"
+        "  - Set HYPER_GOVERNANCE_PATH environment variable\n"
+        "  - Use --governance-path CLI flag"
+    )
+
+
+def get_template_env() -> Environment:
+    """Get Jinja2 Environment with template loader.
+
+    Priority: local specs/.templates/ > bundled package templates.
+
+    Returns:
+        Configured Jinja2 Environment.
+    """
+    # Priority: local .templates/ for customization
+    if TEMPLATES_DIR.exists():
+        return Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+
+    # Fall back to bundled templates from package
+    return Environment(loader=PackageLoader("hyper_spec_core", "templates"))
+
 
 class FeatureSpec(BaseModel):
     """Pydantic model for feature specifications."""
@@ -64,6 +95,7 @@ class ImplementationPlan(BaseModel):
     file_changes: list[dict]
     logic_steps: list[str]
     verification_strategy: list[str]
+
 
 @app.command()
 def init(
@@ -96,14 +128,15 @@ def init(
 
     console.print("[bold green]Initialization Complete![/bold green]")
 
+
 @app.command()
 def new(
     name: str = typer.Option(..., "--name", "-n", help="Name of the feature"),
-    interactive: bool = typer.Option(True, "--interactive/--no-interactive", help="Run interactive steering interview")
-):
-    """
-    Creates a new feature branch and spec file. Runs the steering interview.
-    """
+    interactive: bool = typer.Option(
+        True, "--interactive/--no-interactive", help="Run interactive steering interview"
+    ),
+) -> None:
+    """Create a new feature branch and spec file. Runs the steering interview."""
     console.print(Panel(f"[bold blue]Creating New Feature Spec: {name}[/bold blue]"))
 
     feature_dir = SPECS_DIR / name
@@ -112,19 +145,22 @@ def new(
         raise typer.Exit(code=1)
 
     feature_dir.mkdir()
-    
-    context = {}
+
+    context: dict[str, str] = {}
     if interactive:
         console.print("[bold]Steering Interview[/bold]")
-        context['feature_name'] = name
-        context['author'] = Prompt.ask("Who is the owner of this feature?", default=os.getenv("USER", "developer"))
-        context['complexity'] = Prompt.ask("Estimated Complexity Score (1-10)?", choices=[str(i) for i in range(1, 11)], default="3")
-        
-        # In a real implementation, we would ask more questions here to populate the spec
-        # For now, we'll use the template
-        
+        context["feature_name"] = name
+        context["author"] = Prompt.ask(
+            "Who is the owner of this feature?", default=os.getenv("USER", "developer")
+        )
+        context["complexity"] = Prompt.ask(
+            "Estimated Complexity Score (1-10)?",
+            choices=[str(i) for i in range(1, 11)],
+            default="3",
+        )
+
     # Load Template
-    env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+    env = get_template_env()
     try:
         template = env.get_template("spec_template.md")
         content = template.render(**context)
@@ -136,13 +172,14 @@ def new(
     spec_file = feature_dir / "spec.md"
     spec_file.write_text(content)
     console.print(f"[green]✓[/green] Created {spec_file}")
-    
+
     # Create context.json for checksums (placeholder)
     context_file = feature_dir / "context.json"
     context_file.write_text(json.dumps({"spec_checksum": "TODO"}, indent=2))
 
     console.print(f"[bold green]Feature '{name}' initialized![/bold green]")
     console.print(f"Open {spec_file} to define your requirements.")
+
 
 @app.command()
 def plan(
@@ -168,14 +205,17 @@ def plan(
     spec_content = spec_file.read_text()
 
     # Load Governance Context (The Artifact Handshake)
-    gov_path = resolve_gov_path(governance_path)
-    console.print(f"[cyan]Loading governance context from {gov_path}...[/cyan]")
-
     try:
+        gov_path = resolve_gov_path(governance_path)
+        console.print(f"[cyan]Loading governance context from {gov_path}...[/cyan]")
         adapter = GovernanceAdapter(gov_path)
         gov_context = adapter.load_context()
         governance_prompt = gov_context.to_system_prompt()
         console.print("[green]✓[/green] Governance context loaded.")
+    except ValueError as e:
+        console.print(f"[bold yellow]Warning:[/bold yellow] {e}")
+        console.print("[yellow]Proceeding without governance constraints.[/yellow]")
+        governance_prompt = "No governance constraints available."
     except FileNotFoundError as e:
         console.print(f"[bold yellow]Warning:[/bold yellow] {e}")
         console.print("[yellow]Proceeding without governance constraints.[/yellow]")
@@ -208,7 +248,7 @@ Based on the following Feature Specification, generate an Implementation Plan.
         "summary": f"Implementation plan for {feature_name} based on the provided spec.",
     }
 
-    env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+    env = get_template_env()
     try:
         template = env.get_template("plan_template.md")
         plan_content = template.render(**context)
@@ -221,6 +261,7 @@ Based on the following Feature Specification, generate an Implementation Plan.
 
     console.print(f"[green]✓[/green] Generated {plan_file}")
     console.print("[bold green]Plan Generation Complete![/bold green]")
+
 
 @app.command()
 def implement(
@@ -300,6 +341,7 @@ def _run_governance_validation() -> bool:
             "Set HYPER_VALIDATOR_CMD or ensure 'codex' is on PATH."
         )
         return False
+
 
 if __name__ == "__main__":
     app()

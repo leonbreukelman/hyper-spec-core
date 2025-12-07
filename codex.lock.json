@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "catalog_commit": "72b02de2e7d87937aa41fb5ebe60e43a09842b82",
+  "weave_timestamp": "2025-12-06T22:04:23.270035+00:00",
+  "manifest_hash": "sha256:placeholder",
+  "fragments": [
+    {
+      "name": "base",
+      "version": "1.0.0",
+      "path": ".codex/fragments/base@1.0.0.yaml",
+      "sha256": "96c5e1fb57257c758c2020b6dc15616a6d61fe747e007f7a512f485a67334305"
+    },
+    {
+      "name": "architecture-core",
+      "version": "1.0.0",
+      "path": ".codex/fragments/architecture-core@1.0.0.yaml",
+      "sha256": "c210891878bd1260724bc27e340fded5a0e103b48dbc53fdf87dbd6aee248233"
+    },
+    {
+      "name": "stack-core",
+      "version": "1.0.0",
+      "path": ".codex/fragments/stack-core@1.0.0.yaml",
+      "sha256": "54eda6e50cf7c700417e3409dc33979fceac818543f0972ad205196f04c6946c"
+    },
+    {
+      "name": "process-core",
+      "version": "1.0.0",
+      "path": ".codex/fragments/process-core@1.0.0.yaml",
+      "sha256": "617335b615969df9e6fb2b2458c6a2ad8d024d1bd7d96085e9a0026d120186ce"
+    },
+    {
+      "name": "security-core",
+      "version": "1.0.0",
+      "path": ".codex/fragments/security-core@1.0.0.yaml",
+      "sha256": "5d50beb571a9c58fe5b563bdf36f39779c97ef30ddcad00183ab82c04ea2c313"
+    }
+  ]
+}
