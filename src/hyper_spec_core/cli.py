@@ -67,8 +67,8 @@ def get_template_env() -> Environment:
     Returns:
         Configured Jinja2 Environment.
     """
-    # Priority: local .templates/ for customization
-    if TEMPLATES_DIR.exists():
+    # Priority: local .templates/ for customization (only if it contains template files)
+    if TEMPLATES_DIR.exists() and any(TEMPLATES_DIR.glob("*.md")):
         return Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
     # Fall back to bundled templates from package

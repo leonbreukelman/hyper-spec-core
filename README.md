@@ -18,20 +18,20 @@ Integrated Spec-Driven Development Environment for VS Code.
 
 ### Via uv (recommended)
 
+**Install as CLI tool** (most users):
 ```bash
-uv add hyper-spec-core
+uv tool install git+https://github.com/leonbreukelman/hyper-spec-core.git
 ```
 
-### Via pip
-
+**Add as project dependency** (library usage):
 ```bash
-pip install hyper-spec-core
+uv add git+https://github.com/leonbreukelman/hyper-spec-core.git
 ```
 
 ### Development Installation
 
 ```bash
-git clone https://github.com/your-org/hyper-spec-core.git
+git clone https://github.com/leonbreukelman/hyper-spec-core.git
 cd hyper-spec-core
 uv sync
 ```
